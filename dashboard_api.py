@@ -1,4 +1,3 @@
-
 import mysql.connector
 from mysql.connector import Error
 from flask import Flask, request, jsonify
@@ -21,6 +20,64 @@ def get_connection():
     except Error as e:
         print(f'Error: {e}')
         return None
+    
+@app.route('/bce-detail', methods=['GET'])
+def get_bce_detail():
+    year = int(request.args.get('year', 2025))
+    month = int(request.args.get('month', 11))
+    bce_min = float(request.args.get('bceMin', 0))
+    bce_max = request.args.get('bceMax')
+    bce_max = float(bce_max) if bce_max and bce_max != 'null' else None
+
+    filter_cols = [
+        'Country', 'Employer', 'Segment', 'JobRole', 'Prod_Bucket', 'Engineer_Level', 'HCL_Manager_email'
+    ]
+    filters = [ "m.Year = %s", "m.Month = %s" ]
+    params = [year, month]
+    for col in filter_cols:
+        val = request.args.get(col)
+        if val:
+            filters.append(f"d.{col} = %s")
+            params.append(val)
+    filters.append("m.BCE_Per_Day >= %s")
+    params.append(bce_min)
+    if bce_max is not None:
+        filters.append("m.BCE_Per_Day < %s")
+        params.append(bce_max)
+
+    query = f"""
+        SELECT d.UID, d.Developer_First_name, d.Developer_Last_name, m.BCE_Per_Day, m.Justification_Category
+        FROM developers d
+        JOIN developers_monthly_stats m ON d.UID = m.UID
+        WHERE {' AND '.join(filters)}
+        ORDER BY m.BCE_Per_Day ASC
+    """
+
+    conn = get_connection()
+    cursor = conn.cursor(dictionary=True)
+    cursor.execute(query, params)
+    results = cursor.fetchall()
+    cursor.close()
+    conn.close()
+    return jsonify(results)
+
+@app.route('/bce-justification', methods=['POST'])
+def update_bce_justification():
+    data = request.get_json()
+    uid = data.get('uid')
+    year = int(data.get('year', 2025))
+    month = int(data.get('month', 11))
+    category = data.get('category')
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute(
+        "UPDATE developers_monthly_stats SET Justification_Category = %s WHERE UID = %s AND Year = %s AND Month = %s",
+        (category, uid, year, month)
+    )
+    conn.commit()
+    cursor.close()
+    conn.close()
+    return jsonify({'status': 'success'})
     
 @app.route('/developers', methods=['GET'])
 def get_developers():
@@ -208,9 +265,13 @@ def get_filter_options():
             query += " WHERE " + " AND ".join(filter_clauses)
         cursor.execute(query, filter_params)
         options[col] = [row[0] for row in cursor.fetchall() if row[0] is not None]
+    # Add year and month options from developers_monthly_stats
+    cursor.execute("SELECT DISTINCT Year FROM developers_monthly_stats ORDER BY Year DESC")
+    options['Year'] = [row[0] for row in cursor.fetchall() if row[0] is not None]
+    cursor.execute("SELECT DISTINCT Month FROM developers_monthly_stats ORDER BY Month DESC")
+    options['Month'] = [row[0] for row in cursor.fetchall() if row[0] is not None]
     cursor.close()
     conn.close()
-    #pass
     return jsonify(options)
 
 if __name__ == "__main__":

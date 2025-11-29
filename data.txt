@@ -1,1 +1,18 @@
-Collection	Developer_First_Name	Developer_Last_Name	UID	Country	Employer	Segment	JobRole	Total_BCE	BCE_Per_Day	Tenure	Percentage_BCE	Prod_Bucket	Engineer_Level	HCL_Manager_email
+Project Kicked off - new release.
+End of release activities -User guide documentation
+End of release activities -Security Technical Checklist
+End of release activities - OSCAR process
+End of release activities -Repo/Changelist 
+End of release activities - Final Build
+End of release activities - Bug fixing 
+Lab issues - configuration (Jenkins/Rabbit/ArgoCD)
+Research / Investigation
+Production Support
+Scope definition, Scope change
+Build issues
+Commits on a branch not read by BO
+K8S config & Helm charts 'excluded' by BO
+Planning - Design document
+Re-factoring 
+On leave / Transferred out
+Excluded [Tools / automation]
